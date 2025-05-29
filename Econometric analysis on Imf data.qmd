@@ -1,0 +1,115 @@
+---
+title: "Econometric Analysis on IMF data"
+author: "Poorab Panwar"
+format: html
+editor: visual
+---
+
+# Do IMF Loans Stimulate Growth? An Econometric Analysis Using Historical Macroeconomic Data
+
+## Installing the necessary libraries
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(modelsummary)
+library(car)
+```
+
+## Importing the dataset
+
+```{r}
+Imf = read.csv("E:/IER_ASSIGNMENT/Imfdataset.csv")
+```
+
+## Creating key Variables for modeling
+
+```{r}
+imf = Imf %>% 
+  mutate(
+    Gdp_Growth = (Gdp.1.year.later- Gdp.That.year)/Gdp.That.year,
+    Inflation_change = (Inflation.after.1.yr- Inflation.GDP.Def..in.percentage)/ Inflation.GDP.Def..in.percentage,
+    Debt_change = (Public.Debt.1.year.later - Public.Debt)/Public.Debt,
+    Facility = as.factor(Facility)
+  )
+
+```
+
+::: callout-note 
+## Explanation The above variables are created to run regression anlysis. 
+:::
+
+## Data analysis 
+
+### Amount drawn vs Gdp growth
+```{r}
+ggplot(data = imf,aes(x = Amount.Drawn, y = Gdp_Growth))+ geom_jitter()+geom_smooth(method = "lm")+theme_minimal()+scale_x_continuous(labels = label_number(scale = 1e-6, suffix = "M"))
+```
+:::callout-note
+## Explanation
+The graph above offers an empirical look at a specific economic relationship between Gdp growth and amount drawn by the countries.The regression line has a slightly negative slope. This suggests that, on average, as the Amount Drawn increases, the GDP Growth tends to decrease slightly. The graph above shows that the points on the plot deviate from the line of best fit. The deviation of the independent variable "Amount drawn" and the dependent variable "gdp growth" indicates that there is a lot of variability in GDP Growth for any given Amount Drawn. Due to the large scatter, the Amount Drawn is likely not a strong predictor of GDP Growth when considering all instances together.  There are many other factors influencing GDP Growth that are not captured in this simple two-variable relationship.
+:::
+
+### Summary
+```{r}
+plot1 = imf %>%
+  group_by(Country) %>%
+  summarise(
+    IMF_Programs = n(),
+    Avg_Amount_Drawn = mean(Amount.Drawn, na.rm = TRUE),
+    Avg_GDP_Growth = mean(Gdp_Growth, na.rm = TRUE)
+  )
+```
+
+### Graph showing the average amount drawn by the Countries.
+```{r}
+ggplot(plot1)+geom_bar(aes(x = Country, y = Avg_Amount_Drawn, colour = Country), stat = "identity")+theme_minimal()+theme(axis.text.x = element_text(angle = 45, hjust = 1))+scale_y_continuous(labels = label_number(scale = 1e-6, suffix = "M"))+labs(title = "Avg amout drawn by each country")
+```
+### Avg Gdp growth of a country with IMF's help
+```{r}
+ggplot(plot1, aes(x = Avg_GDP_Growth, y = reorder(Country, Avg_GDP_Growth))) +
+  geom_point(size = 3, color = "steelblue") +
+  theme_minimal()+labs(title = "Avg Gdp growth of a country with IMF's help", x = "Avg GDP Growth", y = "Country")
+
+```
+:::call-out note
+## Explanation
+The above graph shows the average gdp growth rate of each countries. The Graph showing the average amount drawn by the Countries shows Greece as the highest average amount drawn, but the gdp growth rate seems very less. Whereas Ghana, who borrowed less, had highest growth rate.
+:::
+
+
+
+
+
+
+
+
+## Does Imf lending improve Gdp growth?
+```{r}
+imf_model = lm(Gdp_Growth ~ Amount.Drawn + Inflation_change+ Debt_change, data = imf)
+summary(imf_model)
+```
+::: callout-note
+## Explanation
+Based on this regression, IMF lending does not significantly improve GDP growth, in fact, the effect is slightly negative and only weakly significant . The negative coefficient suggests that higher IMF lending is associated with slightly lower GDP growth, though the effect is small. The overall R-squared is very low, meaning most of the variation in GDP growth is explained by other factors not included in the model. The intercept shows that there would be a 15% increase  in gdp growth if the independent variables = 0. The amount drawn is Weakly significant, a higher IMF loan amount tends to slightly reduce GDP growth. Higher inflation change is associated with higher GDP growth. Debt does not show a clear link to the growth of gdp. The R-squared in the model explains only a small portion of the variation in GDP growth.
+:::
+
+## Multicollinearity test
+```{r}
+library(car)
+vif(imf_model)
+
+```
+::: callout-note
+## Explanation
+Multicollinearity in Regression tells us if the independent variables are highly correlated or not. High correlation leads to ineffective interpretation of individual independent variables. Here all of our variables have a VIF<5 that means there is no multicollinearity in the model. 
+:::
+
+## Conclusion
+This regression analysis shows that the impact of IMF lending on GDP growth using panel data regression. Results indicate that the amount drawn from the IMF has a weak,  significant negative association with GDP growth, possibly showing economic issues in borrowing countries. Inflation change shows a positive and statistically significant effect, suggesting short-term inflationary economic activity, while debt change does not significantly influence growth. The multicollinearity also reflects no correlation between independent variables.
+
+Despite some limitations—such as low R², the model effectively demonstrates data cleaning, regression and data visualisation. Further research could incorporate additional macroeconomic controls and panel fixed effects to enhance robustness.
+
+This study provides an empirical exploration of whether IMF lending stimulates economic growth.
